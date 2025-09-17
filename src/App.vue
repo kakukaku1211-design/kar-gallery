@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import art1 from '@/assets/hawk.png'
 import art2 from '@/assets/white-tiger.png'
 import art3 from '@/assets/orca.png'
@@ -11,11 +11,7 @@ import art8 from '@/assets/abronia-graminea.png'
 import art9 from '@/assets/crocodile.png'
 import art10 from '@/assets/snake.png'
 
-type Work = {
-  id: number
-  title: string
-  image: string
-}
+type Work = { id: number; title: string; image: string }
 
 const works = ref<Work[]>([
   { id: 1, title: '鷹　Hawk', image: art1 },
@@ -25,12 +21,48 @@ const works = ref<Work[]>([
   { id: 5, title: 'ハリネズミ　Hedgehog', image: art5 },
   { id: 6, title: 'レッドフォックス　Red Fox', image: art6 },
   { id: 7, title: 'オコジョ　Okojo', image: art7 },
-  { id: 8, title: 'アブロニア　Abronian', image: art8 },
+  { id: 8, title: 'アブロニア　Abronia', image: art8 },
   { id: 9, title: 'ワニ　Crocodile', image: art9 },
   { id: 10, title: 'ヘビ　Snake', image: art10 },
 ])
 
 const selectedWork = ref<Work | null>(null)
+const rotationY = ref(0)
+let startX = 0
+let isDragging = false
+let autoRotateId: number
+
+// ドラッグ / スワイプ開始
+const handlePointerDown = (e: PointerEvent) => {
+  isDragging = true
+  startX = e.clientX
+  const target = e.currentTarget as HTMLElement | null
+  target?.setPointerCapture?.(e.pointerId)
+}
+
+// ドラッグ / スワイプ中
+const handlePointerMove = (e: PointerEvent) => {
+  if (!isDragging) return
+  const dx = e.clientX - startX
+  rotationY.value += dx * 0.3
+  startX = e.clientX
+}
+
+// ドラッグ / スワイプ終了
+const handlePointerUp = (e: PointerEvent) => {
+  isDragging = false
+  const target = e.currentTarget as HTMLElement | null
+  target?.releasePointerCapture?.(e.pointerId)
+}
+
+// 自動回転
+const autoRotate = () => {
+  if (!isDragging) rotationY.value -= 0.1
+  autoRotateId = requestAnimationFrame(autoRotate)
+}
+
+onMounted(() => autoRotate())
+onUnmounted(() => cancelAnimationFrame(autoRotateId))
 </script>
 
 <template>
@@ -42,13 +74,19 @@ const selectedWork = ref<Work | null>(null)
 
     <section class="carousel-section">
       <h2>Exhibition</h2>
-      <div class="carousel">
-        <div class="carousel-track">
-          <div 
-            v-for="(work, i) in works" 
-            :key="work.id" 
+      <div
+        class="carousel"
+        @pointerdown="handlePointerDown"
+        @pointermove="handlePointerMove"
+        @pointerup="handlePointerUp"
+        @pointerleave="handlePointerUp"
+      >
+        <div class="carousel-track" :style="{ transform: `rotateY(${rotationY}deg)` }">
+          <div
+            v-for="(work, i) in works"
+            :key="work.id"
             class="carousel-item"
-            :style="{'--i': i, '--total': works.length}"
+            :style="{ '--i': i, '--total': works.length }"
             @click="selectedWork = work"
           >
             <img :src="work.image" :alt="work.title" />
@@ -100,11 +138,12 @@ header p {
 }
 
 .carousel {
-  perspective: 1200px;
+  perspective: 1500px;
   width: 100%;
-  height: 400px;
+  height: 500px;
   position: relative;
   overflow: visible;
+  cursor: grab;
 }
 
 .carousel-track {
@@ -112,20 +151,20 @@ header p {
   height: 100%;
   position: absolute;
   transform-style: preserve-3d;
-  animation: rotate 25s linear infinite;
 }
 
 .carousel-item {
   position: absolute;
-  width: 200px;
+  width: 250px;
   text-align: center;
-  transform: rotateY(calc((360deg / var(--total)) * var(--i))) translateZ(500px);
+  transform: rotateY(calc((360deg / var(--total)) * var(--i))) translateZ(600px);
+  transition: transform 0.2s;
 }
 
 .carousel-item img {
   width: 100%;
-  border-radius: 8px;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 .caption {
@@ -138,68 +177,33 @@ header p {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.85);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 999;
 }
-
 .modal-content {
-  padding: 0;
-  border-radius: 8px;
-  max-width: 95%;
-  max-height: 95%;
+  background: #fff;
+  padding: 1rem;
+  border-radius: 10px;
+  max-width: 90%;
+  max-height: 90%;
   text-align: center;
   position: relative;
 }
-
 .modal-content img {
-  width: 100%;
-  height: auto;
-  max-height: 90vh;
-  border-radius: 8px;
-  object-fit: contain; /* 枠に収める */
-  display: block;
-  margin: 0 auto;
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 6px;
+  object-fit: contain;
 }
-
-.modal-content h3 {
-  margin: 0.5rem 0 1rem;
-  color: #333;
-}
-
 .close {
   position: absolute;
-  top: 10px;
-  right: 15px;
+  top: 20px;
+  right: 30px;
   font-size: 2rem;
-  color: #fff;
+  color: #666;
   cursor: pointer;
-}
-
-@keyframes rotate {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(-360deg); }
-}
-
-/* スマホでも横スクロールできる */
-@media (pointer: coarse) {
-  .carousel {
-    overflow-x: auto;
-    perspective: none;
-  }
-  .carousel-track {
-    display: flex;
-    transform: none !important;
-    position: static;
-    animation: none;
-  }
-  .carousel-item {
-    position: relative;
-    flex: 0 0 auto;
-    transform: none !important;
-    margin: 0 8px;
-  }
 }
 </style>
