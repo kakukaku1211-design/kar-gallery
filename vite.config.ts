@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/kar-gallery/',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'), // Vite + Node で普通に使える書き方
+      '@': path.resolve(__dirname, './src'), // Vite + Node で普通に使える書き方
     },
   },
 })
